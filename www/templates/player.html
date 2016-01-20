@@ -1,0 +1,209 @@
+<style>
+	pdf-viewer {
+		position: relative;
+		background-color: #444;
+		height: 500px;
+		margin: 5px;
+		overflow: auto;
+		/**
+		top: 30px;
+		bottom: 0;
+		left: 0;
+		right: 0;**/
+	}
+
+	#loader {
+		/**position: fixed;**/
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		overflow: hidden;
+		background-color: #ffffff;
+		z-index: 1000;
+	}
+
+	#loader div {
+		margin-top: 50px;
+		text-align: center;
+	}
+
+	#loader .progress-bar {
+		margin: 5px auto;
+	}
+
+	.progress-bar {
+		width: 200px;
+		height: 30px;
+		border: 1px solid #888888;
+		background-color: #ffffff;
+		overflow: hidden;
+	}
+	
+	.progress-bar span.bar {
+		display: inline-block;
+		background-color: #dddddd;
+		height: 100%;
+		text-align: left;
+	}
+	
+	.zoom_wrapper,
+	.select_page_wrapper,
+	.demos_wrapper,
+	.load_file_wrapper,
+	.search_wrapper,
+	.print_wrapper {
+		display: inline-block;
+		margin: 3px 10px;
+	}
+	.demos_wrapper {
+		float: right;
+	}
+	
+	#toolbar {
+		border-bottom: 1px solid black;
+		height: 30px;
+		box-sizing: border-box;
+	}
+	#container_pdf{
+		position:relative;
+	}
+	#control_1{
+		position:absolute;
+		top:60%;
+		right:7%;
+		display:none;
+		z-index: 5000;
+	}
+	.control{
+		cursor: pointer;
+	}
+</style>
+<div data-ng-init="init()">
+	<!-- HEADER - TOOLS CONTROL -->
+	<div class="outer" style="height: 60px; background-color: #000; margin: 0px;">
+		<!-- 1/4 ITEMS -->
+		<div class="list-control outer"style="width: 25%;">
+			<div class="inline" style="width: 90%">
+				<span style="font-size: 18px;">
+					<span class="glyphicon glyphicon-menu-hamburger control"></span>
+					Back to library
+				</span>
+			</div>
+			<div class="inline" style="width: 8%">
+				<span class="glyphicon glyphicon-chevron-down control"></span>
+			</div>
+		</div>
+		<!-- 2/4 ITEMS -->
+		<div class="list-control outer" style="width: 35%; height: 100%; background-color: #222;">
+			<div class="control-item disabled" data-ng-click="">
+				<span class="glyphicon glyphicon-backward control"></span>
+			</div>
+			<div class="control-item" data-ng-click="play()" data-ng-hide="playerForm.isPlaying">
+				<span class="glyphicon glyphicon-play" style="font-size: 28px;"></span>
+			</div>
+			<div class="control-item" data-ng-click="pause()" data-ng-show="playerForm.isPlaying">
+				<span class="glyphicon glyphicon-pause" style="font-size: 28px;"></span>
+			</div>
+			<div class="control-item disabled" data-ng-click="">
+				<span class="glyphicon glyphicon-forward control"></span>
+			</div>
+			<div class="control-item disabled" data-ng-click="stop()">
+				<span class="glyphicon glyphicon-stop control"></span>
+			</div>
+			<div class="btn-group" style="margin-left: 40px">
+				<button class="btn btn-danger" ng-click="decSpeed()"><<</button>
+				<button class="btn btn-success" ng-click="incSpeed()">>></button>
+			</div>
+			<div data-ng-show="loading.isTXT" class="btn-group" style="margin-left: 40px">
+				<button class="btn btn-danger" ng-click="decFont()">-</button>
+				<button class="btn btn-success" ng-click="incFont()">+</button>
+			</div>
+		</div>
+		<!-- 1/4 ITEMS -->
+		<div class="list-control" style="width: 40%;text-align: right" align="right">
+			
+			<div class="inline" style="50%" align="right">
+				<slider 
+					id="ex2"
+					data-ng-model="dataForm.playbackRate" 
+					min="0" 
+					step="1" 
+					max="20" 
+					value="10"
+					slider-tooltip="hide"
+					data-ng-change="setSpeechRate()"
+					class="inline"></slider>
+				<span style="color: #fff; font-size: 18px; margin: 9px">{{dataForm.playbackRate}}</span>
+					
+				<slider
+					id="ex1"
+					data-ng-model="dataForm.volume" 
+					min="0" 
+					step="1" 
+					max="10" 
+					value="3"
+					slider-tooltip="hide"
+					data-ng-change="setVolume()"
+					class="inline"></slider>
+				<span style="color: #fff; font-size: 18px; margin: 9px">{{dataForm.volume}}</span>
+				<span class="glyphicon glyphicon-save control"></span>
+				<span class="glyphicon glyphicon-cog control" data-ng-click="displayControl()"></span>			
+			</div>
+		</div>
+	</div>
+	<div id="uploadTools" style="height: 40px; background-color: #ddd">
+		<div class="inline" align="center" style="width: 25%; height: 100%; background-color: #ddd; padding-top: 7px; font-weight: bolder; border: 1px solid #aaa">
+			{{fileForm.files.length}} Documents
+		</div>
+		<div data-ng-show="playerForm.displayUpload" align="left" class="inline" align="center" style="width: 70%; height: 100%; background-color: #ddd; padding-top: 5px; font-weight: bolder;">
+			<!-- <form action="/upload" method="POST" enctype="multipart/form-data"> -->
+			<form>
+				<div class="inline" style="width: 70%;">
+					<input type="file" name="file" fileread="vm.uploadme" class="filestyle" data-buttonBefore="true">
+				</div>
+				<div class="inline">
+				</div>
+				<div class="inline" style="width: 8%;">
+					<!-- <button type="submit" class="btn btn-default" data-ng-click="loadListFiles()">Upload</button> -->
+					<button type="submit" class="btn btn-default" data-ng-click="uploadFile()">Upload</button>
+				</div>
+				<div class="inline" style="width: 20%;">
+					<input type="text" class="form-control" data-ng-model="pdfSearchTerm" placeholder="Search..."/>
+				</div>
+			</form>
+			<form data-ng-submit="findNext()" style="display: inline;"></form>
+		</div>
+	</div>
+	
+	<!-- RECENT FILE -->
+	<div id="recentFiles" align="center" class="list-group inline" style="width: 25%; background-color: #eee">
+		<a data-ng-repeat="f in fileForm.files track by $index" class="list-group-item" data-ng-click="loadFileInFrame(f.file)" sibs>{{f.file}}</a>
+	</div>
+	<!-- FILE CONTENT -->
+	<div class="inline" style="width: 73.8%; height: 80%">
+		<iframe data-ng-show="loading.isTXT" id="frameX" data-ng-src="{{dataForm.srcFile}}" width="100%" height="550px" frameborder="0" update-body-style="{'font-size': '{{fontSize}}pt'}"></iframe>
+		<div data-ng-hide="loading.isTXT" id="container_pdf" style="width: 100%">
+			<pdf-viewer 
+				data-src="{{pdfURL}}"
+				data-file="pdfFile"
+				data-current-page="pdfCurrentPage"
+				data-initial-scale="fit_page"
+				data-api="pdfViewerAPI"
+				data-render-text-layer="true"
+				data-progress-callback="onPDFProgress(operation, state, value, total, message)"
+				data-password-callback="onPDFPassword(reason)"
+				data-search-term="{{pdfSearchTerm}}"
+				data-search-result-id="pdfSearchResultID"
+				data-search-num-occurences="pdfSearchNumOccurences">
+			</pdf-viewer>
+			<div id="control_1">
+				<ul>
+					<img class="control" src="../img/plus-.png" data-ng-click="zoomIn()" style="margin-bottom: 10px;"><br>
+					<img class="control" src="../img/minus-.png" data-ng-click="zoomOut()" style="margin-bottom: 10px;"><br>
+					<img class="control" src="../img/right.png" style="margin-bottom: 10px;"><br>
+				</ul>
+			</div>
+		</div>
+	</div>
+</div>

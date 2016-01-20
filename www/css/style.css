@@ -1,0 +1,77 @@
+pre::-moz-selection {color: red; background: yellow;}
+pre::selection {color: red; background: yellow;}
+
+body{
+	font-family: arial 'Bree Serif';
+}
+.inline{
+	display: inline-block;
+	vertical-align: top;
+	margin: 0px !important;
+}
+.outer {
+  display : flex;
+  align-items : center;
+}
+textarea{
+	border: none;
+	padding: 5px;
+	margin: 5px;
+}
+
+.bootstrap-filestyle{
+	height: 80%;
+	vertical-align: middle;
+}
+.list-group-item{
+	cursor: pointer;
+}
+.list-group-item.active, .list-group-item.active:hover{
+	background-color: #D4D4D5;
+	border-color: #DADDE0;
+	color: #111;
+}
+#recentFiles{
+	overflow-y: visible;
+}
+.list-control{
+	color: #00b68f;
+	padding-left: 10px;
+}
+.control{
+	font-size: 20px;
+}
+.control-item{
+	width: 12%;
+	text-align: center;
+	display: inline-block;
+	cursor: pointer;
+}
+.disabled{
+	color: #666;
+}
+#ex1Slider .slider-selection {
+	background: #fff;
+}
+#ex1Slider .slider-track-high{
+	background: #aaa;
+}
+.slider-handle {
+	background-image: linear-gradient(to bottom,#fff 0,#fff 100%);
+}
+#ex1, #ex2{
+	width: 110px;
+	vertical-align: bottom;
+}
+.slider-track-high{
+	background: #aaa;
+}
+
+*.searchResult {
+	font-weight: bold;
+	background-color: yellow;
+	color: red;
+}
+.form-control:focus{
+	/**border: 1px solid #000;**/
+}
