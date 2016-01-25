@@ -148,8 +148,11 @@ var allowCrossDomain = function(req, res, next){
 				});
 				res.on('end', function(){
 					var jsonObject = JSON.parse(str);
-					console.log("str: "+jsonObject.src.length);
-					
+					try {
+						console.log("str: " + jsonObject.src.length);
+					} catch (err) {
+						console.log(jsonObject, '....?');
+					}
 					result.type('text/plain'); 
 					return result.send(jsonObject.src);
 				 });

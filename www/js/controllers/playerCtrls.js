@@ -1,27 +1,27 @@
 
 'use strict';
 
-angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-slider'])	
-	
-	.controller('playerController', function($scope, $rootScope, $sce, $http, $timeout, $interval, 
-										$log, FileDAO, PlayerDAO){
-		
+angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-slider'])
+
+	.controller('playerController', function($scope, $rootScope, $sce, $http, $timeout, $interval,
+											 $log, FileDAO, PlayerDAO){
+
 		// CURRENT READER
 		$rootScope.loading={}
 		$rootScope.loading.isTXT=false;
 		$rootScope.loading.isPDF=false;
-		
+
 		// FORMULAIRES
 		$scope.dataForm={};
 		$scope.dataForm.selectedText = '';		// SENTENCE SELECTED - HIGHLIGHTED
 		$scope.dataForm.srcFile='';				// CURRENT TXT FILE SOURCE
 		$scope.dataForm.volume=3;				// CURRENT VOLUME
 		$scope.dataForm.playbackRate=10;		// CURRENT playbackRate
-		
+
 		$scope.fileForm={};
 		$scope.fileForm.files=[];				// RECENTS FILES
-		
-		$scope.playerForm={};					
+
+		$scope.playerForm={};
 		$scope.playerForm.player = new Audio();		// NEW AUDIO PLAYER
 		$scope.playerForm.src="";					// AUDIO SRC
 		$scope.playerForm.player.volume=0.3;
@@ -32,7 +32,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		$scope.playerForm.isPlaying=false;			// CONROL PLAY/PAUSE ICONS
 		$scope.playerForm.displayUpload=true;		// CONROL UPLOAD/SEARCH ICONS
 		$scope.txtPageContent='';					// CONTENT FILE TXT
-		
+
 		// PDF CONTROLLER
 		$scope.isLoading = false;
 		$scope.downloadProgress = 0;
@@ -48,30 +48,30 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		$scope.pdfSearchResultID = 0;
 		$scope.pdfSearchNumOccurences = 0;
 		$scope.pdfRendredText = "";
-		
+
 		// INCREASE-DECREASE FONT-SIZE
 		$rootScope.fontSize = 13;
 		$rootScope.incFont = function(){
 			$rootScope.fontSize++;
-		};	
+		};
 		$rootScope.decFont = function(){
 			$rootScope.fontSize--;
 		};
-		
+
 		// SET VOLUME
 		$rootScope.setVolume = function(){
 			var volume=Number($scope.dataForm.volume)/10;
 			$scope.playerForm.player.volume=volume;
 			console.log("New volume : "+$scope.playerForm.player.volume);
 		};
-		
+
 		// SET SPEECH RATE
 		$rootScope.setSpeechRate = function(){
 			var playbackRate=Number($scope.dataForm.playbackRate)/10;
 			$scope.playerForm.player.playbackRate=playbackRate;
 			console.log("New playbackRate : "+$scope.playerForm.player.playbackRate);
 		}
-		
+
 		// INCREASE-DECREASE SPEED
 		$rootScope.incSpeed = function(){
 			if($scope.playerForm.player.playbackRate >= (2.0))
@@ -83,7 +83,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				return;
 			$scope.playerForm.player.playbackRate-=0.1;
 		}
-			
+
 		// STOP PLAYING
 		$rootScope.stop = function(){
 			// PAUSE PLAYING
@@ -100,18 +100,18 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				if(iframeDoc && iframeDoc.getSelection())
 					iframeDoc.getSelection().removeAllRanges();
 			}
-				
+
 			else // IN PDF PAGE
 				undoHighlighInLayer();
 		}
-		
+
 		// PAUSE PLAYING
 		$rootScope.pause= function(){
 			$scope.playerForm.player.pause();
 			$scope.playerForm.isDocInReset=false;
 			$scope.playerForm.isSenInReset=false;
 		}
-		
+
 		// PLAY/RESUME PLAYING
 		$rootScope.play= function(){
 			// CHECK IF A SENTENCE IS SELECTED
@@ -128,14 +128,14 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					$scope.playerForm.player.play();
 			}
 		}
-		
+
 		// GET FILE CONTENT
 		$scope.loadFile= function(file_name){
-			
+
 			console.log("file_name : "+file_name);
 			FileDAO.readFile(file_name)
 				.success(function(resp){
-					
+
 					// SET TEXT IN TEXT-AREA
 					$scope.dataForm.text=resp;
 				})
@@ -143,47 +143,85 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					console.log("error : "+err);
 				});
 		}
-		
+
 		// MANAGE AUDIO SRC
 		$scope.trustSrc = function(src){
 			return $sce.trustAsResourceUrl(src);
 		}
-		
+
 		// SEND SENTENCE TO SERVER
 		$scope.speakSentence= function(txt){
+			var currentIteration = $scope.currentIteration;
 			if(!txt || typeof txt === 'undefined')
 				return;
-			
+
 			var sentence=txt.replace(/#/g, " ");
 			var obj={'text': sentence+"."};
+			if ($scope.playerForm.src == '.' || $scope.playerForm.src == '') {
+				highlightTextOnly(sentence)
+				PlayerDAO.getAudio(obj)
+					.success(function(resp){
+						if (currentIteration != $scope.currentIteration) {
+							return; //main speaking loop was changed
+						};
+						if(resp){
+							highlightText(resp);
+						}
+					})
+					.error(function(err){
+						console.log("error speakWord: "+err);
+					});
+
+				//highlightText();
+				return;
+			}
 			PlayerDAO.getAudio(obj)
 				.success(function(resp){
 					if(resp){
-						
-						// SET SENTENCE HIGHLIGHTED
-						if($rootScope.loading.isTXT){
-							setHighlightedText(txt);
-						}
-						else{
-							setSentenceInHighligh(txt);
-						}
-						// UPDATE CURRENT AUDIO SRC
-						$scope.playerForm.src=resp;
-						//$scope.playerForm.player.src=$scope.trustSrc($scope.playerForm.src);
-						$scope.playerForm.player.src=$scope.trustSrc('cache/sound.wav');
-						console.log("new source: "+$scope.playerForm.player.src);
-						// PLAY !!
-						$scope.playerForm.player.play();
+
+						highlightText(resp);
 					}
 				})
 				.error(function(err){
 					console.log("error speakWord: "+err);
 				});
+
+			function highlightTextOnly() {
+				// SET SENTENCE HIGHLIGHTED
+				if($rootScope.loading.isTXT){
+					setHighlightedText(txt);
+				}
+				else{
+					setSentenceInHighligh(txt);
+				}
+			}
+
+			function highlightText(resp) {
+				if ( resp == null ) resp = '.';
+				// SET SENTENCE HIGHLIGHTED
+				if($rootScope.loading.isTXT){
+					setHighlightedText(txt);
+				}
+				else{
+					setSentenceInHighligh(txt);
+				}
+				if ( resp == '.' ) {
+					$scope.finishedPlaying();
+					return;
+				}
+				// UPDATE CURRENT AUDIO SRC
+				$scope.playerForm.src=resp;
+				//$scope.playerForm.player.src=$scope.trustSrc($scope.playerForm.src);
+				$scope.playerForm.player.src=$scope.trustSrc('cache/sound.wav');
+				console.log("new source: "+$scope.playerForm.player.src);
+				// PLAY !!
+				$scope.playerForm.player.play();
+			}
 		}
-		
+
 		// GET FILE IN I-FRAME
 		$scope.loadFileInFrame= function(file_name){
-			
+
 			// DISPLAY DOCUMENT
 			var ext=file_name.split('.').pop();
 			if(String(ext).toLowerCase() === 'pdf'){
@@ -196,16 +234,16 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			}
 			// RESET MODE
 			$scope.playerForm.documentMode=true;
-			$rootScope.stop();	
+			$rootScope.stop();
 		}
-		
+
 		// variable passed to app controller
 		$scope.$on('fileForm', function (evt, file){
 			if(typeof file !== 'undefined'){
 				console.log("name : "+file['name']);
 				$scope.fileForm.file = file;
 			}
-			
+
 		});
 		$scope.$on('textForm', function (evt, text, spans){
 			//console.log('textForm: '+text);
@@ -214,22 +252,22 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			//console.log("spans: "+spans.length);
 		});
 		$scope.$watch('pdfSearchTerm', function (input){
-			
+
 			if($rootScope.loading.isTXT){ // MODE TEXT DOCUMENT
 				setHighlightedText(input);
 			}
 		});
-		
+
 		// UPLOAD FILE TO SERVER
 		$scope.uploadFile= function(){
 			console.log("Je suis dans uploadFile");
 			console.log("fileForm.file: "+JSON.stringify($scope.fileForm.file));
 			if(typeof $scope.fileForm.file === 'undefined')
 				return;
-			
+
 			/** FILE TO BASE-64
-			var reader = new FileReader();
-			reader.onload = function(evt) {
+			 var reader = new FileReader();
+			 reader.onload = function(evt) {
 				var fileData = evt.target.result;
 				console.log("file[64]: "+fileData);
 				
@@ -237,9 +275,9 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				$scope.dataForm.srcFile=$scope.trustSrc(fileData);
 				$scope.$apply();
 			};
-			reader.readAsDataURL($scope.fileForm.file);
-			return;**/
-			
+			 reader.readAsDataURL($scope.fileForm.file);
+			 return;**/
+
 			var fd = new FormData();
 			//Take the first selected file
 			fd.append("file", $scope.fileForm.file);
@@ -254,16 +292,16 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					console.log("error uploadFile: "+err);
 				});
 		}
-		
+
 		// UPDATE RECENT FILES
 		$scope.loadListFiles= function(){
 			if(typeof $scope.fileForm.file === 'undefined')
 				return;
-			
+
 			if(typeof $scope.fileForm.files === 'undefined')
 				$scope.fileForm.files=[];
 			$scope.fileForm.files.unshift({'file': $scope.fileForm.file['name']});
-			
+
 			console.log("files: "+JSON.stringify($scope.fileForm.files[0]));
 			// UPDATE LIST
 			FileDAO.updateRecentFiles(JSON.stringify($scope.fileForm.files))
@@ -274,9 +312,9 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					console.log("error : "+err);
 				});
 		}
-		
+
 		$scope.loadFileContent= function(){
-			
+
 			// GET FIRST PAGE CONTENT
 			if($rootScope.loading.isTXT){
 				var iBody = $("#frameX").contents().find("body");
@@ -288,37 +326,53 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				$scope.txtPageContent=$scope.pdfRendredText;
 			}
 		}
-		
+
 		var iLine=0;
 		$scope.playWholeDocument= function(){
-	
+
 			// READER CORE
 			console.log("READER CORE -  BEGIN");
+			$scope.currentIteration = Math.random();
 			var sentences=[];
 			var lines=[];
-			
+
 			$scope.loadFileContent();
-			
+
 			// sentences=$scope.txtPageContent.split(/[.:?!#]+/);
-			sentences=$scope.txtPageContent.split(/[.?!:\r\n]+/);
+
+			$scope.sentences=$scope.txtPageContent.split(/[.?!:\r\n]+/);
+			var sentences = $scope.sentences;
 			console.log("sentences: "+sentences.length);
-				
-			var iSentence=0;
+
+			$scope.iSentence=0;
+			var iSentence = 0;
 			// LOGGER
 			$log.info(iSentence+": "+sentences[iSentence]);
 			//PLAY FIRST SENTENCE
 			$scope.speakSentence(sentences[iSentence]);
-			$scope.playerForm.player.onended=function(){
-				if(iSentence<sentences.length){
-					iSentence++;
-					$log.info("Next: "+iSentence+": "+sentences[iSentence]);
-					// BIND NEXT ONE
-					if(typeof sentences[iSentence] !== 'undefined' && sentences[iSentence].trim() !== "" && sentences[iSentence].trim() !== "#")
-						$scope.speakSentence(sentences[iSentence].trim());
-				}
-			};			
+			if ( $scope.playerForm.src == '.' || $scope.playerForm.src == '' ) {
+				return; //in 'Server' mode
+				$scope.finishedPlaying();
+				return;
+			}
+			$scope.playerForm.player.onended=$scope.finishedPlaying;
+
+
 		}
-		
+
+		$scope.finishedPlaying = function finishedPlaying(){
+			var iSentence = $scope.iSentence;
+			var sentences = $scope.sentences;
+			if(iSentence<sentences.length){
+				iSentence++;
+				$scope.iSentence = iSentence;
+				$log.info("Next: "+iSentence+": "+sentences[iSentence]);
+				// BIND NEXT ONE
+				if(typeof sentences[iSentence] !== 'undefined' && sentences[iSentence].trim() !== "" && sentences[iSentence].trim() !== "#")
+					$scope.speakSentence(sentences[iSentence].trim());
+			}
+		};
+
 		$scope.displayControl= function(){
 			$scope.playerForm.displayUpload ^= true; // XOR
 			if($scope.playerForm.displayUpload)
@@ -326,11 +380,11 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			else
 				$('#uploadTools').css('background-color', '#fff');
 		}
-		
+
 		$scope.init= function(){
 			FileDAO.getRecentFiles()
 				.success(function(resp){
-					
+
 					if(typeof resp !== 'undefined'){
 						console.log("getRecentFiles: "+JSON.stringify(resp));
 						$scope.fileForm.files=resp;
@@ -340,18 +394,18 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					console.log("error : "+err);
 				});
 		}
-						
+
 		$(":file").filestyle({buttonBefore: true});
 		$scope.playerForm.player.onplay=function(){
 			// ICONS
 			$scope.playerForm.isPlaying=true;
 			$scope.playerForm.player.playbackRate=Number($scope.dataForm.playbackRate)/10;
-			$scope.$apply();	
+			$scope.$apply();
 		}
 		$scope.playerForm.player.onpause=function(){
 			// ICONS
 			$scope.playerForm.isPlaying=false;
-			$scope.$apply();	
+			$scope.$apply();
 		}
 		$scope.playerForm.player.onstop=function(){
 			// ICONS
@@ -363,7 +417,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			// ICONS
 			$scope.playerForm.isPlaying=false;
 			$scope.playerForm.player.src="";
-			$scope.$apply();	
+			$scope.$apply();
 		}
 
 		// UNDO HIGHLIGHT FOR PDF
@@ -373,7 +427,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				$this.replaceWith($this[0].textContent);
 			});
 		}
-		
+
 		// HIGHLIGHT FOR PDF
 		function setSentenceInHighligh(sentence){
 			$log.info('setSentenceInHighligh : '+sentence);
@@ -383,13 +437,13 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			}
 			// RESET HIGHLIGHT LAYER
 			undoHighlighInLayer();
-			
+
 			var $spans=$('#XLayer').children('span');
 			// DIVIDE SENTENCE
 			var lines=[];
 			lines=sentence.split(/[#]+/);
 			console.log('lines: '+lines.length);
-			
+
 			for(var i=0; i<$scope.spans.length; i++){
 				// SPAN CONTENT
 				var content=$scope.spans[i];
@@ -398,7 +452,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					if(lines.length == 1){ // WHOLE SENTENCE IN ONE LINE
 						var newC=content.replace(lines[0], "<span class='highlight'>"+lines[0]+"</span>");
 						// REPLACE
-						$spans[i].innerHTML=newC;		
+						$spans[i].innerHTML=newC;
 						//console.log('['+i+'] WOOW, We got it !!');
 						break;
 					}
@@ -421,52 +475,52 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					}
 				}
 			}
-			
+
 			// SCROLL
 			$(".highlight").get(0).scrollIntoView();
 			/**$('html, body').animate({
 				scrollTop: $('.highlight').offset().top
 			}, 2000);**/
 		}
-		
+
 		// HIGHLIGHT FOR TXT
 		function setHighlightedText(txt){
-			
+
 			if(!txt)
 				return;
-			
+
 			var iframe = document.getElementById("frameX");
 			var iframeDoc = iframe.contentDocument; //iframe.contentWindow.document;
-			
+
 			// LOAD PAGE CONTENT
 			$scope.loadFileContent();
-			
+
 			// GET COORDONNEES - SENTENCE
 			var jStart=$scope.txtPageContent.indexOf(txt);
 			var jEnd=jStart+txt.length;
-			
+
 			//console.log('Position['+txt+']['+jStart+', '+jEnd+']');
 			if(jStart === -1)
 				return;
-			
+
 			var rang = iframeDoc.createRange();
 			rang.setStart(iframeDoc.body.childNodes[0].firstChild, jStart);
 			rang.setEnd(iframeDoc.body.childNodes[0].firstChild, jEnd);//jEnd+1);
 			var selection = iframe.contentWindow.getSelection();
-			
+
 			// APPLY SELECTION
 			selection.removeAllRanges();
 			selection.addRange(rang);
 			// SET FOCUS
 			iframe.focus();
 		}
-		
+
 		// PDF CONTROLLER
 		$scope.onPDFProgress = function (operation, state, value, total, message) {
-			console.log("onPDFProgress(" + operation + ", " + state + ", " + value + ", " + total + ")");			
+			console.log("onPDFProgress(" + operation + ", " + state + ", " + value + ", " + total + ")");
 			if(operation === "render" && value === 1) {
 				if(state === "success") {
-					
+
 					if($scope.pdfZoomLevels.length === 0) {
 						// Read all the PDF zoom levels in order to populate the combobox...
 						var lastScale = 0.1;
@@ -481,20 +535,20 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 							lastScale = curScale.value;
 						} while(true);
 					}
-					
+
 					// BIND TEXT LAYER
 					$('#XLayer')[0].onmouseup=function(){
 						// UNDO ALL SELECTION
 						undoHighlighInLayer();
 						var selection = rangy.getSelection($('#XLayer')[0]);
-						if(String(selection).trim() !== ""){ 
+						if(String(selection).trim() !== ""){
 							// HERE IS HIGHLIGHTED SENTENCE TO PLAY
 							$scope.dataForm.selectedText=String(selection).trim();
 							// RESET PLAYER
 							$scope.playerForm.documentMode=false;
 							$rootScope.stop();
 						}
-							
+
 					}
 					$scope.pdfCurrentPage = 1;
 					$scope.pdfTotalPages = $scope.pdfViewerAPI.getNumPages();
@@ -540,15 +594,15 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			if($scope.pdfURL === pdfURL) {
 				return;
 			}
-			
+
 			/** GET PDF CONTENT
-			pdfToText(pdfURL).then(function(result) {
+			 pdfToText(pdfURL).then(function(result) {
 				// $scope.pdfRendredText=result.replace(/\t/g, ' ');
 				$scope.pdfRendredText=result.replace(/\s\s/g, '#');
 				//console.log('result: '+result);
 				console.log('pdfRendredText: '+$scope.pdfRendredText);
 			});**/
-		
+
 			$scope.isLoading = true;
 			$scope.downloadProgress = 0;
 			$scope.pdfZoomLevels = [];
@@ -558,11 +612,11 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			// RESET ILine
 			iLine=0;
 		};
-				
+
 		$scope.findNext = function (){
 			$scope.pdfViewerAPI.findNext();
 		};
-		
+
 		$scope.findPrev = function (){
 			$scope.pdfViewerAPI.findPrev();
 		};
@@ -579,7 +633,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				console.log("pdf: "+$scope.pdfFile['name']);
 			});
 		};
-		
+
 		$scope.onPDFPassword = function (reason){
 			return prompt("The selected PDF is password protected. PDF.js reason: " + reason, "");
 		};
@@ -602,4 +656,4 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				});
 		});
 	})
-	;
+;

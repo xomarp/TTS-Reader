@@ -76,7 +76,16 @@ function SayServerLite(){
             var text = req.body.text;
             var rate = req.body.rate;
             var voice = req.body.voice;
-            
+
+            if (sh.isWin()==false) {
+                voice = sh.dv(voice, 'graham')
+                self.speak(function result(body){
+                    res.json({src:"."})
+                }, text , rate, voice);
+                return;
+            }
+
+
 			var json = {}
 			json.src="audio/x-wav;base64,";
             self.speak(function result(body){
