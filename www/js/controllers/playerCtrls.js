@@ -488,29 +488,43 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 
 			if(!txt)
 				return;
-
+			
 			var iframe = document.getElementById("frameX");
 			var iframeDoc = iframe.contentDocument; //iframe.contentWindow.document;
-
+			
 			// LOAD PAGE CONTENT
 			$scope.loadFileContent();
-
+			
 			// GET COORDONNEES - SENTENCE
 			var jStart=$scope.txtPageContent.indexOf(txt);
 			var jEnd=jStart+txt.length;
-
+			
 			//console.log('Position['+txt+']['+jStart+', '+jEnd+']');
 			if(jStart === -1)
 				return;
-
+			
+			// GET (X,Y) OF TEXT //
+			var oldTxt=String(iframeDoc.body.childNodes[0].innerHTML);
+			var newC=oldTxt.replace(txt, "<span id='current'>"+txt+"</span>");
+			// REPLACE
+			iframeDoc.body.childNodes[0].innerHTML=newC;
+			// GET DOM ELEMENT
+			var elem=iframeDoc.body.childNodes[0].getElementsByTagName('SPAN')[0];
+			// SCROLL INTO VIEW
+			elem.scrollIntoView({block: "end", behavior: "smooth"});
+			window.scrollBy(0, 50);
+			// ROLLBACK TO ORIGIN;
+			iframeDoc.body.childNodes[0].innerHTML=oldTxt;
+			
 			var rang = iframeDoc.createRange();
 			rang.setStart(iframeDoc.body.childNodes[0].firstChild, jStart);
 			rang.setEnd(iframeDoc.body.childNodes[0].firstChild, jEnd);//jEnd+1);
 			var selection = iframe.contentWindow.getSelection();
-
+			
 			// APPLY SELECTION
 			selection.removeAllRanges();
 			selection.addRange(rang);
+			
 			// SET FOCUS
 			iframe.focus();
 		}
