@@ -31,6 +31,8 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		$scope.playerForm.isSenInReset=false;		// WILL RESET PLAY SENTENCE
 		$scope.playerForm.isPlaying=false;			// CONROL PLAY/PAUSE ICONS
 		$scope.playerForm.displayUpload=true;		// CONROL UPLOAD/SEARCH ICONS
+		$scope.sentences=[];
+		$scope.iSentence=0;
 		$scope.txtPageContent='';					// CONTENT FILE TXT
 
 		// PDF CONTROLLER
@@ -88,6 +90,8 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		$rootScope.stop = function(){
 			// PAUSE PLAYING
 			$rootScope.pause();
+			// RESET SENTENCE CURRENTE
+			$scope.iSentence=0;
 			if($scope.playerForm.player.currentTime)
 				$scope.playerForm.player.currentTime=0.0;
 			// RESET PLAY DOCUMENT (IF IS PLAYING)
@@ -100,7 +104,6 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				if(iframeDoc && iframeDoc.getSelection())
 					iframeDoc.getSelection().removeAllRanges();
 			}
-
 			else // IN PDF PAGE
 				undoHighlighInLayer();
 		}
@@ -144,6 +147,22 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				});
 		}
 
+		$rootScope.playNextSentence= function(){
+			// PAUSE PLAYING
+			$rootScope.pause();
+			// PLAY NEXT SENTENCE
+			//$scope.iSentence++;
+			$scope.finishedPlaying(1);
+		}
+		
+		$rootScope.playPrevSentence= function(){
+			// PAUSE PLAYING
+			$rootScope.pause();
+			// PLAY PREV SENTENCE
+			//$scope.iSentence--;
+			$scope.finishedPlaying((-1));
+		}
+		
 		// MANAGE AUDIO SRC
 		$scope.trustSrc = function(src){
 			return $sce.trustAsResourceUrl(src);
@@ -206,7 +225,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					setSentenceInHighligh(txt);
 				}
 				if ( resp == '.' ) {
-					$scope.finishedPlaying();
+					$scope.finishedPlaying(1);
 					return;
 				}
 				// UPDATE CURRENT AUDIO SRC
@@ -328,6 +347,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		}
 
 		var iLine=0;
+		var iSentence = 0;
 		$scope.playWholeDocument= function(){
 
 			// READER CORE
@@ -345,26 +365,23 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			console.log("sentences: "+sentences.length);
 
 			$scope.iSentence=0;
-			var iSentence = 0;
 			// LOGGER
 			$log.info(iSentence+": "+sentences[iSentence]);
 			//PLAY FIRST SENTENCE
 			$scope.speakSentence(sentences[iSentence]);
 			if ( $scope.playerForm.src == '.' || $scope.playerForm.src == '' ) {
 				return; //in 'Server' mode
-				$scope.finishedPlaying();
+				$scope.finishedPlaying(1);
 				return;
 			}
-			$scope.playerForm.player.onended=$scope.finishedPlaying;
-
-
+			$scope.playerForm.player.onended=$scope.finishedPlaying(1);
 		}
 
-		$scope.finishedPlaying = function finishedPlaying(){
+		$scope.finishedPlaying = function(index){
 			var iSentence = $scope.iSentence;
 			var sentences = $scope.sentences;
 			if(iSentence<sentences.length){
-				iSentence++;
+				iSentence=iSentence+index;
 				$scope.iSentence = iSentence;
 				$log.info("Next: "+iSentence+": "+sentences[iSentence]);
 				// BIND NEXT ONE
