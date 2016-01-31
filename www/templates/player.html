@@ -78,6 +78,31 @@
 	.control{
 		cursor: pointer;
 	}
+
+	.unselectable {
+		-moz-user-select: -moz-none;
+		-khtml-user-select: none;
+		-webkit-user-select: none;
+		-o-user-select: none;
+		user-select: none;
+		cursor: default !important;
+	}
+
+	.container-right-controls {
+		margin-right: 10px;
+		padding-right: 10px;
+	}
+
+	.list-group-item:first-child {
+		border-top-left-radius: 0px;
+		border-top-right-radius: 0px;
+	}
+
+	.list-group-item:last-child {
+		margin-bottom: 0;
+		border-bottom-right-radius: 0px;
+		border-bottom-left-radius: 0px;
+	}
 </style>
 <div data-ng-init="init()">
 	<!-- HEADER - TOOLS CONTROL -->
@@ -85,7 +110,7 @@
 		<!-- 1/4 ITEMS -->
 		<div class="list-control outer"style="width: 25%;">
 			<div class="inline" style="width: 90%">
-				<span style="font-size: 18px;">
+				<span style="font-size: 18px;" class="unselectable">
 					<span class="glyphicon glyphicon-menu-hamburger control"></span>
 					Back to library
 				</span>
@@ -96,16 +121,16 @@
 		</div>
 		<!-- 2/4 ITEMS -->
 		<div class="list-control outer" style="width: 35%; height: 100%; background-color: #222;">
-			<div class="control-item disabled" data-ng-click="playPrevSentence()">
+			<div class="control-item disabled" data-ng-click="playPrevSentence()" title="Jump to previous sentence">
 				<span class="glyphicon glyphicon-backward control"></span>
 			</div>
-			<div class="control-item" data-ng-click="play()" data-ng-hide="playerForm.isPlaying">
+			<div class="control-item" data-ng-click="play()" title="Play" data-ng-hide="playerForm.isPlaying">
 				<span class="glyphicon glyphicon-play" style="font-size: 28px;"></span>
 			</div>
-			<div class="control-item" data-ng-click="pause()" data-ng-show="playerForm.isPlaying">
+			<div class="control-item" data-ng-click="pause()" title="Pause playback" data-ng-show="playerForm.isPlaying">
 				<span class="glyphicon glyphicon-pause" style="font-size: 28px;"></span>
 			</div>
-			<div class="control-item disabled" data-ng-click="playNextSentence()">
+			<div class="control-item disabled" data-ng-click="playNextSentence()" title="Jump to next sentence">
 				<span class="glyphicon glyphicon-forward control"></span>
 			</div>
 			<div class="control-item disabled" data-ng-click="stop()">
@@ -121,9 +146,8 @@
 			</div>
 		</div>
 		<!-- 1/4 ITEMS -->
-		<div class="list-control" style="width: 40%;text-align: right" align="right">
-			
-			<div class="inline" style="50%" align="right">
+		<div class="list-control container-right-controls" style="width: 40%;text-align: right" align="right">
+			<div class="inline"   align="right">
 				<slider 
 					id="ex2"
 					data-ng-model="dataForm.playbackRate" 
@@ -153,10 +177,10 @@
 		</div>
 	</div>
 	<div id="uploadTools" style="height: 40px; background-color: #ddd">
-		<div class="inline" align="center" style="width: 25%; height: 100%; background-color: #ddd; padding-top: 7px; font-weight: bolder; border: 1px solid #aaa">
+		<div class="inline unselectable" align="center" style="width: 25%; height: 100%; background-color: #ddd; padding-top: 7px; font-weight: bolder; border: 1px solid #aaa">
 			{{fileForm.files.length}} Documents
 		</div>
-		<div data-ng-show="playerForm.displayUpload" align="left" class="inline" align="center" style="width: 70%; height: 100%; background-color: #ddd; padding-top: 5px; font-weight: bolder;">
+		<div data-ng-show="playerForm.displayUpload" align="left" class="inline" align="center" style="width: 70%; height: 100%; background-color: #ddd; padding-top: 3.5px; font-weight: bolder;">
 			<!-- <form action="/upload" method="POST" enctype="multipart/form-data"> -->
 			<form>
 				<div class="inline" style="width: 70%;">
