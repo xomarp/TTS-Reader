@@ -78,6 +78,24 @@ function SayServerLite(){
             var voice = req.body.voice;
 
             if (sh.isWin()==false) {
+
+                var json = {}
+                var file = __dirname+'/www/cache/sound' //nof file ext necessary
+                json.src="audio/mpeg3;base64,";
+                json.src="audio/x-wav;base64,";
+                self.speak(function result(body){
+                    console.log('file', file +'.mp3')
+                    fs.readFile(file +'.wav', function(err, original_data){
+                        console.log('data', original_data)
+                        json.src += new Buffer(original_data, 'binary').toString('base64');
+                        json.status = 'ok';
+                        res.json(json);
+                    });
+                }, text , rate, voice, file);
+
+                return;
+
+
                 voice = sh.dv(voice, 'graham')
                 self.speak(function result(body){
                     res.json({src:"."})
@@ -98,16 +116,19 @@ function SayServerLite(){
             }, text , rate, voice);
         }
 
-        p.speak = function (fx, text, rate, voice){
+        p.speak = function (fx, text, rate, voice, file){
 			console.log("speak.text: "+text);
             var child_process = require('child_process');
             var gb = "say "
-            voice = sh.dv(voice, 'Ryan')
+            voice = sh.dv(voice, 'Graham')
             gb += ' '+'-v ' + voice +' ';
             gb += ' '+sh.qq(text) +' ';
             if(rate != null){
                 gb += ' ' + '-r ' + rate + ' ';
             }
+
+            var isMac = sh.isWin() == false
+            gb += ' ' + '-o ' + file+'.aiff' + ' ';
 
             if(sh.isWin()){ //windows
                 var path = require('path');
@@ -116,8 +137,19 @@ function SayServerLite(){
                 sh.writeFile(filePath, text);
                 gb = 'cscript "C:\\Program Files\\Jampal\\ptts.vbs" -u '+filePath+' -w www/cache/sound.wav';
             }
+            console.log('log', gb)
 			// EXECUTION
             var cp = child_process.exec(gb, function (err, stdout, stderr){
+                if ( isMac ) {
+                    var cmd2convert = 'lame -m m '+file+'.aiff '+file+'.mp3';
+                    var cmd2convert = 'ffmpeg -i '+file+'.aiff '+file+'.wav';
+                    console.log('cmd2convert', cmd2convert)
+                    var cp = child_process.exec(cmd2convert, function (err, stdout, stderr){
+                        fx(true);
+                    });
+                    return
+                }
+
                 fx(true);
                 //console.log('done speaking', text, stdout);
             });
@@ -140,6 +172,12 @@ exports.SayServerLite = SayServerLite;
 if(module.parent == null){
     var e = new SayServerLite()
     e.start();
+    var req = {};
+    req.body = {};
+    req.body.text = 'sentence.'
+    var res = {};
+    res.json =function () {}
+    e.say(req, res)
 };
 
 

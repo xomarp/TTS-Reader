@@ -188,7 +188,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 						}
 					})
 					.error(function(err){
-						console.log("error speakWord: "+err);
+						console.log("error speakWord: "+err,txt );
 					});
 
 				//highlightText();
@@ -217,6 +217,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 
 			function highlightText(resp) {
 				if ( resp == null ) resp = '.';
+				console.log('resp', resp!='.')
 				// SET SENTENCE HIGHLIGHTED
 				if($rootScope.loading.isTXT){
 					setHighlightedText(txt);
@@ -351,6 +352,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		$scope.playWholeDocument= function(){
 
 			// READER CORE
+			$scope.playingDocument = true;
 			console.log("READER CORE -  BEGIN");
 			$scope.currentIteration = Math.random();
 			var sentences=[];
@@ -369,24 +371,38 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			$log.info(iSentence+": "+sentences[iSentence]);
 			//PLAY FIRST SENTENCE
 			$scope.speakSentence(sentences[iSentence]);
-			if ( $scope.playerForm.src == '.' || $scope.playerForm.src == '' ) {
+			if ( $scope.playerForm.src == '.' /*|| $scope.playerForm.src == ''*/ ) {
+
+				console.log('server mode end')
 				return; //in 'Server' mode
 				$scope.finishedPlaying(1);
 				return;
 			}
-			$scope.playerForm.player.onended=$scope.finishedPlaying(1);
+			console.log('setup end handler')
+			$scope.playerForm.player.onended=$scope.finishedPlaying2;//(1);
+		}
+
+		$scope.finishedPlaying2 = function finishedPlaying2() {
+
+			$scope.finishedPlaying(1)
 		}
 
 		$scope.finishedPlaying = function(index){
+
 			var iSentence = $scope.iSentence;
+
+
 			var sentences = $scope.sentences;
+			console.log('finished', index, iSentence);
 			if(iSentence<sentences.length){
-				iSentence=iSentence+index;
+				//iSentence=iSentence+index;
+				iSentence=iSentence+1;
 				$scope.iSentence = iSentence;
-				$log.info("Next: "+iSentence+": "+sentences[iSentence]);
+				console.log("Next: ",iSentence,": ",sentences[iSentence],iSentence);
 				// BIND NEXT ONE
-				if(typeof sentences[iSentence] !== 'undefined' && sentences[iSentence].trim() !== "" && sentences[iSentence].trim() !== "#")
+				if(typeof sentences[iSentence] !== 'undefined' && sentences[iSentence].trim() !== "" && sentences[iSentence].trim() !== "#") {
 					$scope.speakSentence(sentences[iSentence].trim());
+				}
 			}
 		};
 
@@ -431,6 +447,7 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			$scope.$apply();
 		}
 		$scope.playerForm.player.onended=function(){
+			console.log('ended', $scope.playerForm.player.src);
 			// ICONS
 			$scope.playerForm.isPlaying=false;
 			$scope.playerForm.player.src="";
