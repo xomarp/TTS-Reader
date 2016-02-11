@@ -242,6 +242,8 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 		// GET FILE IN I-FRAME
 		$scope.loadFileInFrame= function(file_name){
 
+			// SYNC WITH RECENT_FILES.JSON FILE
+			$scope.updateListFiles();
 			// DISPLAY DOCUMENT
 			var ext=file_name.split('.').pop();
 			if(String(ext).toLowerCase() === 'pdf'){
@@ -361,16 +363,27 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 			$scope.loadFileContent();
 
 			// sentences=$scope.txtPageContent.split(/[.:?!#]+/);
-
 			$scope.sentences=$scope.txtPageContent.split(/[.?!:\r\n]+/);
 			var sentences = $scope.sentences;
 			console.log("sentences: "+sentences.length);
 
-			$scope.iSentence=0;
+			// GET LAST SENTENCE SPEAKED
+			$('#recentFiles').find('.active').each(function(){
+				var $this=$(this);
+				var seekedSentence=0;
+				/**seekedSentence=Number($this.attr('data-seek'));**/
+				// PUT CURRENT FILE IN SCOPE
+				$scope.fileForm.currentFile=$this.html();
+				seekedSentence=$scope.getSeekedSentence($scope.fileForm.currentFile);
+				$scope.iSentence=seekedSentence;
+			});
+			
 			// LOGGER
-			$log.info(iSentence+": "+sentences[iSentence]);
+			$log.info($scope.iSentence+": "+sentences[$scope.iSentence]);
 			//PLAY FIRST SENTENCE
-			$scope.speakSentence(sentences[iSentence]);
+			$scope.speakSentence(sentences[$scope.iSentence]);
+			// UPDATE N° LAST SENTENCE SPEAKED
+			$scope.updateSeeking($scope.iSentence+1);
 			if ( $scope.playerForm.src == '.' /*|| $scope.playerForm.src == ''*/ ) {
 
 				console.log('server mode end')
@@ -402,6 +415,11 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				// BIND NEXT ONE
 				if(typeof sentences[iSentence] !== 'undefined' && sentences[iSentence].trim() !== "" && sentences[iSentence].trim() !== "#") {
 					$scope.speakSentence(sentences[iSentence].trim());
+					// UPDATE N° LAST SENTENCE SPEAKED
+					if(iSentence>=sentences.length-1)
+						$scope.updateSeeking(0);
+					else
+						$scope.updateSeeking(iSentence+1);
 				}
 			}
 		};
@@ -414,6 +432,43 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 				$('#uploadTools').css('background-color', '#fff');
 		}
 
+		// UPDATE N° LAST SENTENCE SPEAKED
+		$scope.updateSeeking= function(new_value){
+		
+			var file_name=$scope.fileForm.currentFile;
+			for(var i=0; i<$rootScope.recentFiles.length; i++){
+				var elem=$rootScope.recentFiles[i];
+				if(elem['file'] === file_name)
+					$rootScope.recentFiles[i]['seek']=new_value;
+			}
+		}
+		
+		// GET N° LAST SENTENCE SPEAKED
+		$scope.getSeekedSentence= function(){
+		
+			var file_name=$scope.fileForm.currentFile;
+			var seekedSentence=0;
+			for(var i=0; i<$rootScope.recentFiles.length; i++){
+				var elem=$rootScope.recentFiles[i];
+				if(elem['file'] === file_name)
+					seekedSentence=elem['seek'];
+			}
+			
+			return seekedSentence;
+		}
+		
+		// UPDATE SEEK PROPERTY
+		$scope.updateListFiles= function(){
+			// UPDATE LIST
+			FileDAO.updateRecentFiles(JSON.stringify($rootScope.recentFiles))
+				.success(function(resp){
+					console.log("success : updateRecentFiles");
+				})
+				.error(function(err){
+					console.log("error : "+err);
+				});
+		}
+		
 		$scope.init= function(){
 			FileDAO.getRecentFiles()
 				.success(function(resp){
@@ -421,6 +476,8 @@ angular.module('playerCtrls', ['ngSanitize', 'connexionServices', 'ui.bootstrap-
 					if(typeof resp !== 'undefined'){
 						console.log("getRecentFiles: "+JSON.stringify(resp));
 						$scope.fileForm.files=resp;
+						// SET RECENTS FILES IN SESSION
+						$rootScope.recentFiles=resp;
 					}
 				})
 				.error(function(err){

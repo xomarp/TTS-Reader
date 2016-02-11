@@ -5,7 +5,8 @@ var app = angular.module('readerApp', ['indexCtrls', 'playerCtrls', 'angular-pdf
 	
 app
 	.run(function($rootScope){
-		
+		// RECENTS FILES
+		$rootScope.recentFiles=[];
 	})
 	.directive("fileread", ['$timeout', function ($timeout){
 		return {
